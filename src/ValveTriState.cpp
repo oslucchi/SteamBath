@@ -58,13 +58,14 @@ void ValveTriState::autoOn()
 
 void ValveTriState::setup(unsigned long now)
 {
-
+	Serial.print(now);
 }
 
 void ValveTriState::loop(unsigned long now)
 {
 	if (timer[0]->getIsExpired() && timer[0]->getIsFront())
 	{
+		Serial.print(now);
 		switchOff();
 		isAuto = false;
 	}

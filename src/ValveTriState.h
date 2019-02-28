@@ -14,8 +14,8 @@
 #define	VALVE_WAY_B	0x01
 
 class ValveTriState: public Command {
-	unsigned char way;
-	bool isAuto;
+	uint8_t way = 0;
+	bool isAuto = false;;
 public:
 	ValveTriState();
 	virtual ~ValveTriState();
