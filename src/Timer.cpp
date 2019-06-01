@@ -137,7 +137,7 @@ void Timer::setDuration(unsigned char* t)
 		decimalMultiplier = (unsigned long) 60 * 60 * 1000;
 		break;
 	}
-	units = (unsigned long)(((*t & 0b00111111)<<1)+(*(t+1) & 0b00000001));
+	units = (unsigned long)(((*t & 0b00111111)<<1)+(*(t+1) & 0b100000000));
 	decimals = (unsigned long)(*(t+1) & 0b01111111);
 
 	duration = units * unitsMultilpier + decimals * decimalMultiplier;

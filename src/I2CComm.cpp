@@ -6,10 +6,9 @@
  */
 
 #include <I2CComm.h>
-#define	LOCAL_BUF_SIZE	256
+#define	LOCAL_BUF_SIZE	128
 
 ArduinoControl * arCtrl;
-
 
 
 void clearChannel()
@@ -27,14 +26,14 @@ void clearChannel()
 
 void receiveEvent(int howMany)
 {
-	uint8_t localBuf[LOCAL_BUF_SIZE];
+	uint8_t localBuf[64];
 	uint8_t bytesRead = (uint8_t) Wire.readBytes(localBuf, howMany);
 
 	uint8_t writeIdxBck = arCtrl->writeIdx;
 	for(int i = 0; i < bytesRead; i++)
 	{
-		if (arCtrl->writeIdx == 255) arCtrl->writeIdx = 0;
-		if (arCtrl->writeIdx == arCtrl->readIdx)
+		if ((arCtrl->writeIdx == arCtrl->readIdx - 1) ||
+			((arCtrl->writeIdx == LOCAL_BUF_SIZE - 1) && (arCtrl->readIdx == 0)))
 		{
 			arCtrl->writeIdx = writeIdxBck;
 			arCtrl->writeBuf[0] = 0x02;
@@ -42,37 +41,15 @@ void receiveEvent(int howMany)
 			arCtrl->writeBufLen = 2;
 			return;
 		}
-		arCtrl->readBuf[arCtrl->writeIdx] = localBuf[i];
+
+		if (arCtrl->writeIdx == LOCAL_BUF_SIZE - 1) arCtrl->writeIdx = 0;
+		arCtrl->readBuf[arCtrl->writeIdx++] = localBuf[i];
 		Serial.print(arCtrl->toHex(localBuf[i]));
-		arCtrl->writeIdx++;
 	}
 	Serial.println(" - New message received");
+	sprintf((char *) localBuf, "readIdx %d - writeIdx %d", arCtrl->readIdx, arCtrl->writeIdx);
+	Serial.println((char *) localBuf);
 	return;
-
-//	memset(writeBuffer, '\0', sizeof(writeBuffer));
-//	bufLen = 0;
-//	Serial.print("The controller is");
-//	Serial.print((arCtrl->getInitialized() ? " " : " not "));
-//	Serial.println("initialized");
-//	if (arCtrl->getInitialized())
-//	{
-//		bufLen = arCtrl->handleI2CCommand((const unsigned char *)&readBuffer[0], &writeBuffer[0]);
-//	}
-//	else if (readBuffer[1] != I2CCMD_INITIALIZE_UNIT)
-//	{
-//		writeBuffer[0] = 0x02;
-//		writeBuffer[1] = I2CCMD_NACK;
-//		bufLen = 2;
-//	}
-//	else
-//	{
-//		bufLen = arCtrl->initializeControls((const unsigned char *)&readBuffer[0], &writeBuffer[0]);
-//		arCtrl->setup(millis());
-//		arCtrl->setInitialized(true);
-//		writeBuffer[0] = 0x02;
-//		writeBuffer[1] = I2CCMD_ACK;
-//		bufLen = 2;
-//	}
 }
 
 void sendEvent()
@@ -87,26 +64,9 @@ void sendEvent()
 	}
 	else
 	{
-//		Serial.print("Sending response pending. Length ");
-//		Serial.println(arCtrl->writeBufLen);
-//		Serial.println("Message content: ");
-//		for(int y = 0; y < arCtrl->writeBufLen; y++)
-//		{
-//			;
-//			if (isprint(arCtrl->writeBuf[y]))
-//			{
-//				Serial.print("   ");
-//				Serial.print(arCtrl->writeBuf[y]);
-//				Serial.print(" ");
-//			}
-//			else
-//			{
-//				Serial.print(arCtrl->toHex(arCtrl->writeBuf[y]));
-//				Serial.print(" ");
-//			}
-//		}
-//		Serial.println();
-		Serial.println("Response pending:");
+		Serial.print("Response pending (len ");
+		Serial.print(arCtrl->writeBufLen);
+		Serial.println("):");
 		for(int y = 0; y < arCtrl->writeBufLen; y++)
 		{
 			;
@@ -123,14 +83,12 @@ void sendEvent()
 			}
 		}
 		Serial.println();
-		Wire.write(arCtrl->writeBuf, arCtrl->writeBufLen);
-		memset(arCtrl->writeBuf, '\0', arCtrl->writeBufLen);
+		Wire.write((char *) arCtrl->writeBuf, (size_t) arCtrl->writeBufLen);
+		memset(arCtrl->writeBuf, '\0', LOCAL_BUF_SIZE);
 		arCtrl->writeBufLen = 0;
 	}
 }
 
-
-//I2CComm::I2CComm(void (*receiveEvent)(int), void (*sendEvent)()) {
 I2CComm::I2CComm(ArduinoControl * control) {
 	arCtrl = control;
 	Wire.begin(I2C_BUS_ADDRESS);

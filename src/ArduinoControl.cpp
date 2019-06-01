@@ -27,8 +27,8 @@ ArduinoControl::ArduinoControl() {
 	lowerBound[GREEN] = 0;
 	lowerBound[BLUE] = 0;
 	actualValue[RED] = 0;
-	actualValue[GREEN] = 127;
-	actualValue[BLUE] = 254;
+	actualValue[GREEN] = 0;
+	actualValue[BLUE] = 0;
 	steamLigthsSensors.addCommand(CTRLID_RGBSTRIPE, (uint8_t) TYPE_LED_RGB, pin,
 								  upperBound, lowerBound, actualValue, &timerManager);
 
@@ -82,12 +82,12 @@ char* ArduinoControl::toHex(uint8_t a)
 	static char hex[6];
 	hex[0] = '0';
 	hex[1] = 'x';
-	hex[2] = (int) (a / 16);
+	hex[2] = (char) (a / 16);
 	if (hex[2] >= 10)
 		hex[2] += 55;
 	else
 		hex[2] += 48;
-	hex[3] = (a % 16);
+	hex[3] = (char) (a % 16);
 	if (hex[3] >= 10)
 		hex[3] += 55;
 	else
@@ -108,7 +108,7 @@ void ArduinoControl::setup(unsigned long now)
 
 void ArduinoControl::loop(unsigned long now)
 {
-	if (writeIdx - readIdx != 1)
+	if (writeIdx != readIdx)
 	{
 		handleI2CCommand();
 	}
@@ -134,35 +134,37 @@ Command* ArduinoControl::getCommand(unsigned char ctrlId)
 
 int ArduinoControl::handleI2CCommand()
 {
-	Serial.print("Received command (r ");
-	Serial.print(readIdx);
-	Serial.print(" - w ");
-	Serial.print(writeIdx);
-	Serial.println("):");
+	char dbgBuffer[80];
+	sprintf((char *) dbgBuffer, "Received command. Current idxs read %d - write %d", readIdx, writeIdx);
+	Serial.println((char *) dbgBuffer);
+
 	uint8_t cmdBuf[32];
 
-	if (readIdx == 255) readIdx = 0;
-	uint8_t cmdLen = readBuf[readIdx + 1];
-	Serial.println("Message content:");
+	uint8_t cmdLen = readBuf[readIdx++];
+	sprintf((char *) dbgBuffer, "Msg len %d. Dumping content", cmdLen);
+	Serial.println((char *) dbgBuffer);
 
-	for(int i = 0; i < cmdLen; i++)
+	for(int i = 1; i < cmdLen; i++)
 	{
-		if (readIdx == 255) readIdx = 0;
-		cmdBuf[i] = readBuf[++readIdx];
-		Serial.print(toHex(cmdBuf[i]));
+		if (readIdx == LOCAL_BUF_SIZE - 1) readIdx = 0;
+		cmdBuf[i - 1] = readBuf[readIdx++];
+		Serial.print(toHex(cmdBuf[i - 1]));
 	}
 	Serial.println();
 
-	Command* ctrl = getCommand(cmdBuf[1]);
+	Command* ctrl = getCommand(cmdBuf[0]);
 
 	if (ctrl == nullptr)
 	{
+		Serial.print("Command ");
+		Serial.print(cmdBuf[0]);
+		Serial.println(" not found");
 		writeBuf[0] = (uint8_t) 0x02;
 		writeBuf[1] = (uint8_t) I2CCMD_NACK;
 	}
 	else
 	{
-		ctrl->handleCommand(&cmdBuf[2], writeBuf);
+		ctrl->handleCommand(&cmdBuf[1], writeBuf);
 	}
 	writeBufLen = writeBuf[0];
 	return writeBuf[0];

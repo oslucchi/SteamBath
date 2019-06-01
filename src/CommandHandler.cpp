@@ -39,6 +39,8 @@ void CommandHandler::addCommand(uint8_t ctrlId, byte ctrlType, uint8_t* pin, uin
 //		break;
 	case TYPE_LED_RGB:
 		current->cmd = new LedRGB();
+		((LedRGB *)(current->cmd))->setMode(MODE_MANUAL);
+		((LedRGB *)(current->cmd))->switchOff();
 	}
 	current->cmd->ctrlId = ctrlId;
 	current->cmd->ctrlType = ctrlType;

@@ -15,20 +15,27 @@ LedRGB::LedRGB()
 
 void LedRGB::setup(unsigned long now)
 {
+	leds[RED].upperBound = 255;
+	leds[GREEN].upperBound = 255;
+	leds[BLUE].upperBound = 255;
+	leds[RED].lowerBound = 0;
+	leds[GREEN].lowerBound = 0;
+	leds[BLUE].lowerBound = 0;
+	leds[RED].actualValue = 0;
+	leds[GREEN].actualValue = 0;
+	leds[BLUE].actualValue = 0;
+	leds[RED].direction = 1;
+	leds[GREEN].direction = 1;
+	leds[BLUE].direction = 1;
+	leds[RED].speed = 1;
+	leds[GREEN].speed = 1;
+	leds[BLUE].speed = 1;
 	leds[RED].timer = timerManager->getNewTimer("RED");
-	leds[RED].timer->setDuration(leds[RED].speed);
+	leds[RED].timer->setDuration(100);
 	leds[GREEN].timer = timerManager->getNewTimer("GREEN");
-	leds[GREEN].timer->setDuration(leds[RED].speed);
+	leds[GREEN].timer->setDuration(100);
 	leds[BLUE].timer = timerManager->getNewTimer("BLUE");
-	leds[BLUE].timer->setDuration(leds[RED].speed);
-
-	if (mode == MODE_AUTO)
-	{
-		for(int i = 0; i < 3; i++)
-		{
-			leds[i].timer->start(now);
-		}
-	}
+	leds[BLUE].timer->setDuration(100);
 }
 
 void LedRGB::loop(unsigned long now)
@@ -40,15 +47,14 @@ void LedRGB::loop(unsigned long now)
 		case MODE_AUTO:
 			if (leds[i].timer->getIsExpired())
 			{
-//				Serial.print("Led "); Serial.print(leds[i].pin); Serial.print(" value "); Serial.println(leds[i].actualValue * status);
 				pwmBrightness(i);
-				leds[i].timer->setDuration(leds[i].speed);
 				leds[i].timer->restart(now);
 			}
 			break;
 
 		case MODE_MANUAL:
 			break;
+
 		default:
 			Serial.println("LedRGB in unknown mode");
 		}
@@ -105,6 +111,11 @@ void LedRGB::handleCommand(const unsigned char * command, unsigned char * respon
 		leds[BLUE].actualValue = command[3];
 		response[0] = 2;
 		response[1] = I2CCMD_ACK;
+//		response[2] = leds[RED].actualValue;
+//		response[3] = leds[GREEN].actualValue;
+//		response[4] = leds[BLUE].actualValue;
+		// response[5] = status;
+
 		break;
 
 	case 0x05:
@@ -120,9 +131,7 @@ void LedRGB::handleCommand(const unsigned char * command, unsigned char * respon
 
 	case 0x06:
 		Serial.println("LedRGB: I2CCMD_SET_SPEED");
-		leds[RED].speed = command[1];
-		leds[GREEN].speed = command[2];
-		leds[BLUE].speed = command[3];
+		setSpeed((uint8_t *)&command[1]);
 		response[0] = 2;
 		response[1] = I2CCMD_ACK;
 		break;
@@ -137,6 +146,13 @@ void LedRGB::handleCommand(const unsigned char * command, unsigned char * respon
 		break;
 
 	case 0x08:
+		Serial.println("LedRGB: I2CCMD_SET_TIMERS");
+		setTimers((uint8_t *) &command[1]);
+		response[0] = 2;
+		response[1] = I2CCMD_ACK;
+		break;
+
+	case 0x09:
 		Serial.println("LedRGB: I2CCMD_FADE");
 		int direction;
 		if (command[1] == 0)
@@ -156,6 +172,11 @@ void LedRGB::handleCommand(const unsigned char * command, unsigned char * respon
 		response[1] = I2CCMD_ACK;
 		break;
 	}
+}
+
+void LedRGB::setMode(uint8_t mode)
+{
+	this->mode = mode;
 }
 
 void LedRGB::switchOn()
@@ -178,8 +199,8 @@ void LedRGB::turnAutoOn()
 	mode = MODE_AUTO;
 	for(int i = 0; i < 3; i++)
 	{
-		Serial.print("Turning on speed "); Serial.println(leds[i].speed);
-		leds[i].timer->setDuration(leds[i].speed);
+		Serial.print("Turning on speed ");
+		Serial.println(leds[i].timer->getDuration());
 		leds[i].timer->start(now);
 	}
 }
@@ -201,14 +222,19 @@ void LedRGB::setLowerBound(uint8_t* lb)
 void LedRGB::setSpeed(uint8_t* s)
 {
 	leds[RED].speed = s[0];
-	leds[RED].timer->setDuration(s[0]);
-	leds[RED].timer->restart(millis());
 	leds[GREEN].speed = s[1];
-	leds[GREEN].timer->setDuration(s[1]);
-	leds[GREEN].timer->restart(millis());
 	leds[BLUE].speed = s[2];
-	leds[BLUE].timer->setDuration(s[2]);
-	leds[BLUE].timer->restart(millis());
+}
+
+void LedRGB::setTimers(uint8_t* s)
+{
+	unsigned long now = millis();
+	leds[RED].timer->setDuration(&s[0]);
+	leds[GREEN].timer->setDuration(&s[2]);
+	leds[BLUE].timer->setDuration(&s[4]);
+	leds[RED].timer->restart(now);
+	leds[GREEN].timer->restart(now);
+	leds[BLUE].timer->restart(now);
 }
 
 void LedRGB::setActualValue(uint8_t* sv)
@@ -233,31 +259,38 @@ void LedRGB::fade()
 
 void LedRGB::pwmBrightness(uint8_t led)
 {
-	if (leds[led].actualValue > leds[led].upperBound) leds[led].actualValue = leds[led].upperBound;
-	if (leds[led].actualValue < leds[led].lowerBound) leds[led].actualValue = leds[led].lowerBound;
-
+	bool chgDirection = false;
 	if (leds[led].actualValue >= leds[led].upperBound && leds[led].direction == 1)
 	{
 		leds[led].actualValue = leds[led].upperBound;
-		if (fading)
-		{
-			turnManualOn();
-			fading = false;
-		}
-		else
-			leds[led].direction = -1;
+		Serial.println(leds[led].timer->getName());
+		Serial.println(" - Start bZzdescending");
+		chgDirection = true;
 	}
 	else if (leds[led].actualValue <= leds[led].lowerBound && leds[led].direction == -1)
 	{
 		leds[led].actualValue = leds[led].lowerBound;
+		Serial.println(leds[led].timer->getName());
+		Serial.println(" - Start ascending");
+		chgDirection = true;
+	}
+	if (chgDirection)
+	{
 		if (fading)
 		{
+			Serial.println(leds[led].timer->getName());
+			Serial.println(" - End of fading");
 			turnManualOn();
+			leds[led].direction = 0;
 			fading = false;
 		}
 		else
-			leds[led].direction = 1;
+			leds[led].direction *= -1;
 	}
-	leds[led].actualValue += leds[led].direction;
+	leds[led].actualValue += leds[led].direction * leds[led].speed;
+	if (leds[led].actualValue > leds[led].upperBound)
+		leds[led].actualValue = leds[led].upperBound;
+	if (leds[led].actualValue < leds[led].lowerBound)
+		leds[led].actualValue = leds[led].lowerBound;
 };
 

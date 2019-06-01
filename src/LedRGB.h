@@ -58,6 +58,8 @@ public:
 	void setSpeed(uint8_t *);
 	void setActualValue(uint8_t *);
 	void setPin(uint8_t*);
+	void setMode(uint8_t mode);
+	void setTimers(uint8_t* s);
 };
 
 

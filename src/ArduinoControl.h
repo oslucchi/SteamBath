@@ -24,6 +24,7 @@
 #define CTRLID_STEAM_WATER_OUT	(uint8_t) 5
 #define CTRLID_HUMIDITY_SENSOR	(uint8_t) 6
 
+#define	LOCAL_BUF_SIZE			128
 
 class ArduinoControl {
 	CommandHandler steamLigthsSensors;
@@ -31,9 +32,9 @@ class ArduinoControl {
 	TimerManager timerManager;
 
 public:
-	uint8_t readBuf[256];
-	uint8_t writeBuf[256];
-	uint8_t writeIdx = 1;
+	uint8_t readBuf[LOCAL_BUF_SIZE];
+	uint8_t writeBuf[LOCAL_BUF_SIZE];
+	uint8_t writeIdx = 0;
 	uint8_t	readIdx = 0;
 	uint8_t writeBufLen = 0;
 
