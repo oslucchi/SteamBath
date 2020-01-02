@@ -1,5 +1,5 @@
 /*
- * LedStripeHandler.cpp
+ * LedRGB.cpp
  *
  *  Created on: Feb 10, 2019
  *      Author: osvaldo
@@ -264,7 +264,7 @@ void LedRGB::pwmBrightness(uint8_t led)
 	{
 		leds[led].actualValue = leds[led].upperBound;
 		Serial.println(leds[led].timer->getName());
-		Serial.println(" - Start bZzdescending");
+		Serial.println(" - Start descending");
 		chgDirection = true;
 	}
 	else if (leds[led].actualValue <= leds[led].lowerBound && leds[led].direction == -1)
@@ -283,6 +283,7 @@ void LedRGB::pwmBrightness(uint8_t led)
 			turnManualOn();
 			leds[led].direction = 0;
 			fading = false;
+			return;
 		}
 		else
 			leds[led].direction *= -1;

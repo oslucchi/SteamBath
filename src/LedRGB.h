@@ -1,5 +1,5 @@
 /*
- * LedStripeHandler.h
+ * LedRGB.h
  *
  *  Created on: Feb 10, 2019
  *      Author: osvaldo
