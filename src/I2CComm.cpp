@@ -13,21 +13,17 @@ ArduinoControl * arCtrl;
 
 void clearChannel()
 {
-	Serial.println("Clearing channel...");
-
 	while( Wire.available())
 	{
 		byte b = Wire.read();
-		Serial.print(" ");
-		Serial.print(arCtrl->toHex(b));
 	}
-	Serial.println();
 }
 
-void receiveEvent(int howMany)
+void fillBuffer(uint8_t *localBuf, uint8_t bytesRead)
 {
-	uint8_t localBuf[64];
-	uint8_t bytesRead = (uint8_t) Wire.readBytes(localBuf, howMany);
+	char msgBuf[64];
+	sprintf((char *) msgBuf, "fillBuffer() init readIdx %d - writeIdx %d", arCtrl->readIdx, arCtrl->writeIdx);
+	Serial.println(msgBuf);
 
 	uint8_t writeIdxBck = arCtrl->writeIdx;
 	for(int i = 0; i < bytesRead; i++)
@@ -44,12 +40,54 @@ void receiveEvent(int howMany)
 
 		if (arCtrl->writeIdx == LOCAL_BUF_SIZE - 1) arCtrl->writeIdx = 0;
 		arCtrl->readBuf[arCtrl->writeIdx++] = localBuf[i];
-		Serial.print(arCtrl->toHex(localBuf[i]));
 	}
-	Serial.println(" - New message received");
-	sprintf((char *) localBuf, "readIdx %d - writeIdx %d", arCtrl->readIdx, arCtrl->writeIdx);
-	Serial.println((char *) localBuf);
+	Serial.print("fillBuffer() - Incoming buf: ");
+	for(int i = 0; i < bytesRead; i++)
+		Serial.print(arCtrl->toHex(localBuf[i]));
+	Serial.println();
+	sprintf((char *) msgBuf, "fillBuffer() exit readIdx %d - writeIdx %d", arCtrl->readIdx, arCtrl->writeIdx);
+	Serial.println((char *) msgBuf);
 	return;
+}
+
+void I2CComm::receiveEventOnSerial()
+{
+	uint8_t bytesRead = 0;
+	uint8_t localBuf[64];
+	char readBuf[64];
+    char *p = readBuf;
+    char *str;
+	char rc;
+	memset(readBuf, '\0', sizeof(readBuf));
+	while ((rc = Serial.read()) != '\n')
+	{
+		if (rc <32)
+			continue;
+		readBuf[bytesRead++] = rc;
+		if (bytesRead >= sizeof(readBuf))
+		{
+			bytesRead = sizeof(readBuf) - 1;
+			readBuf[bytesRead] = 0;
+			break;
+		}
+	}
+
+    bytesRead = 0;
+    while ((str = strtok_r(p, " ", &p)) != NULL) // delimiter is the semicolon
+	{
+    	localBuf[bytesRead++] = atoi(str);
+	}
+	fillBuffer(localBuf, bytesRead);
+}
+
+void receiveEvent(int howMany)
+{
+	uint8_t localBuf[64];
+	uint8_t bytesRead = (uint8_t) Wire.readBytes(localBuf, howMany);
+	if (!_DEBUG_)
+	{
+		fillBuffer(localBuf, bytesRead);
+	}
 }
 
 void sendEvent()
@@ -83,7 +121,7 @@ void sendEvent()
 			}
 		}
 		Serial.println();
-		Wire.write((char *) arCtrl->writeBuf, (size_t) arCtrl->writeBufLen);
+		Wire.write(arCtrl->writeBuf, (size_t) arCtrl->writeBufLen);
 		memset(arCtrl->writeBuf, '\0', LOCAL_BUF_SIZE);
 		arCtrl->writeBufLen = 0;
 	}
@@ -91,6 +129,9 @@ void sendEvent()
 
 I2CComm::I2CComm(ArduinoControl * control) {
 	arCtrl = control;
+}
+
+void I2CComm::connectToBus() {
 	Wire.begin(I2C_BUS_ADDRESS);
 	Serial.print("On the i2c bus with address ");
 	Serial.println(I2C_BUS_ADDRESS);

@@ -14,11 +14,11 @@
 
 struct _timers {
 	Timer	*timer;
-	bool	allocated;
+	bool	allocated = false;
 };
 
 class TimerManager {
-	_timers timers[10];
+	_timers timers[HOW_MANY];
 private:
 	;
 public:

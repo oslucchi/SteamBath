@@ -31,6 +31,7 @@ void TimerManager::dropTimer(Timer* timer)
 		if (timers[i].timer == timer)
 		{
 			timers[i].timer->reset();
+			free(timers[i].timer);
 			timers[i].allocated = false;
 			break;
 		}
@@ -39,13 +40,14 @@ void TimerManager::dropTimer(Timer* timer)
 
 Timer* TimerManager::getNewTimer(const char *n)
 {
-	for(int i =0; i < HOW_MANY; i++)
+	for(int i = 0; i < HOW_MANY; i++)
 	{
 		if (!timers[i].allocated)
 		{
 			timers[i].allocated = true;
 			timers[i].timer = new Timer();
 			timers[i].timer->setName(n);
+			Serial.println(n);
 			return(timers[i].timer);
 		}
 	}
@@ -54,7 +56,7 @@ Timer* TimerManager::getNewTimer(const char *n)
 
 void TimerManager::dump()
 {
-	for(int i =0; i < HOW_MANY; i++)
+	for(int i = 0; i < HOW_MANY; i++)
 	{
 		if (timers[i].allocated)
 		{

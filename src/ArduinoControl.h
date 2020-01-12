@@ -27,7 +27,7 @@
 #define	LOCAL_BUF_SIZE			128
 
 class ArduinoControl {
-	CommandHandler steamLigthsSensors;
+	CommandHandler lights;
 	bool initialized;
 	TimerManager timerManager;
 
@@ -43,6 +43,7 @@ public:
 	void setPin(int pin[]);
 	void setTimer(Timer *t[]);
 	Timer *getTimer(int idx);
+	TimerManager getTimerManager();
 	void setup(unsigned long now);
 	void loop(unsigned long now);
 	int handleI2CCommand();

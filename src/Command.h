@@ -23,6 +23,7 @@ public:
 	uint8_t *actualValue;
 	Timer **timer;
 	TimerManager* timerManager;
+	char controlName[12];
 
 	Command();
 	virtual ~Command();
@@ -41,6 +42,7 @@ public:
 	uint8_t* getActualValue();
 	virtual void setActualValue(uint8_t *) = 0;
 	virtual void setPin(uint8_t *) = 0;
+	void setControlName(char *name);
 };
 
 #endif /* COMMAND_H_ */

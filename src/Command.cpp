@@ -31,3 +31,9 @@ void Command::setTimerManager(TimerManager* tm)
 {
 	timerManager = tm;
 }
+
+void Command::setControlName(char *name)
+{
+	memset(this->controlName, '\0', sizeof(this->controlName));
+	strncpy(this->controlName, name, 11);
+}

@@ -19,7 +19,7 @@ Timer::Timer() {
 
 void Timer::setName(const char* n)
 {
-	strcpy(name, n);
+	strncpy(name, n, sizeof(name) - 1);
 }
 
 void Timer::setDuration(unsigned long d)
@@ -53,6 +53,7 @@ void Timer::reset()
 {
 	isRunning = false;
 	isExpired = false;
+	isFront = false;
 	startTime = 0;
 	elapsed = 0;
 }
@@ -60,12 +61,12 @@ void Timer::reset()
 void Timer::resume()
 {
 	isRunning = true;
+	isFront = false;
 	startTime = millis();
 }
 
 void Timer::update(unsigned long  mills)
 {
-	isFront = false;
 	if (isRunning)
 	{
 		elapsed = mills - startTime;
@@ -74,7 +75,7 @@ void Timer::update(unsigned long  mills)
 	{
 		isRunning = false;
 		isExpired = true;
-		isFront = false;
+		isFront = true;
 	}
 }
 
@@ -110,7 +111,12 @@ void Timer::restart(unsigned long mills)
 
 bool Timer::getIsFront()
 {
-	return isFront;
+	if (isFront)
+	{
+		isFront = false;
+		return true;
+	}
+	return false;
 }
 
 void Timer::setDuration(unsigned char* t)
@@ -137,7 +143,7 @@ void Timer::setDuration(unsigned char* t)
 		decimalMultiplier = (unsigned long) 60 * 60 * 1000;
 		break;
 	}
-	units = (unsigned long)(((*t & 0b00111111)<<1)+(*(t+1) & 0b100000000));
+	units = (unsigned long)(((*t & 0b00111111)<<1)+((*(t+1) & 0b10000000)>>7));
 	decimals = (unsigned long)(*(t+1) & 0b01111111);
 
 	duration = units * unitsMultilpier + decimals * decimalMultiplier;

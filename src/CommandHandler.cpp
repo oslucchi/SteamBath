@@ -9,15 +9,11 @@
 
 #include <CommandHandler.h>
 #include <ArduinoControl.h>
-#include <DigitalInput.h>
-#include <DigitalOutput.h>
-// #include <LedPwm.h>
 #include <LedRGB.h>
-#include <ValveTriState.h>
 
 
 void CommandHandler::addCommand(uint8_t ctrlId, byte ctrlType, uint8_t* pin, uint8_t* upperBound,
-								uint8_t *lowerBound, uint8_t* actualValue, TimerManager* timerManager)
+								uint8_t *lowerBound, uint8_t* actualValue, TimerManager* timerManager, char *ctrlName)
 {
 	unsigned long now = millis();
 
@@ -50,6 +46,7 @@ void CommandHandler::addCommand(uint8_t ctrlId, byte ctrlType, uint8_t* pin, uin
 	current->cmd->setPin(pin);
 	current->cmd->setTimerManager(timerManager);
 	current->cmd->setup(now);
+	current->cmd->setControlName(ctrlName);
 	current->next = nullptr;
 
 	return;

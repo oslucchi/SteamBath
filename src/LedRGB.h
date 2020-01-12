@@ -25,6 +25,10 @@
 #define	GREEN		1
 #define	BLUE		2
 
+#define FADING_OFF	0
+#define FADING_IN	1
+#define FADING_OUT	2
+
 typedef struct _Led {
 	uint8_t 	pin = -1;
 	uint8_t 	actualValue = 0;
@@ -40,7 +44,11 @@ private:
 	Led		leds[3];
 	uint8_t	mode = 0; // 0 - manual / 1 - auto
 	uint8_t	status = 0; // 0 - off / 1 - on
-	bool	fading = false;
+	uint8_t	fading = FADING_OFF;
+	uint16_t fadingTimeout = 0, fadingTimeIn = 0;
+	Timer *fadingTmr;
+	void handleBrightnessFading(uint8_t led);
+	boolean handleBrightnessNormal(uint8_t led);
 	void pwmBrightness(uint8_t led);
 public:
 	LedRGB();
